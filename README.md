@@ -2,7 +2,7 @@
 
 
 >mijia_washer是一款ha自定义插件,通过miio协议接入到homeassistant
->可以获取实时状态，控制洗衣机启停等
+>可以获取实时状态，控制洗衣机启停(暂不支持)等
 
 
 ### 下载custom component
@@ -12,7 +12,7 @@ https://github.com/tiandeyu/mijia_washer/tree/main/custom_components
 ```shell
 //文件目录结构如下
 /config/custom_components/mijia_washer/__init__.py
-/config/custom_components/mijia_washer/binary_sensor.py
+/config/custom_components/mijia_washer/fan.py
 /config/custom_components/mijia_washer/manifest.json
 ```
 

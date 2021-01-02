@@ -33,6 +33,7 @@ AVAILABLE_PROPERTIES = [
     "volume",
 ]
 
+ICON = 'mdi:washing-machine'
 
 def setup_platform(hass, config, add_devices_callback, discovery_info=None):
     # get config
@@ -69,6 +70,11 @@ class MijiaWasher(FanEntity):
     def name(self):
         """Return the name of the device if any."""
         return self._name
+
+    @property
+    def icon(self):
+        """Return the icon for device by its type."""
+        return ICON
 
     @property
     def available(self):
