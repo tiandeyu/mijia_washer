@@ -76,6 +76,13 @@ class MijiaWasher(FanEntity):
     def __init__(self, name, host, token):
         self._name = name
         self._device = Device(ip=host, token=token)
+        info = self._device.info()
+        self._info = {
+            'firmware_version': info.firmware_version,
+            'hardware_version': info.hardware_version,
+            'mac_address': info.mac_address,
+            'model': info.model,
+        }
         self._available = True
         self._speed = None
         self._state = False
