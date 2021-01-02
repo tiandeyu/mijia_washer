@@ -89,7 +89,7 @@ class MijiaWasher(FanEntity):
     @property
     def is_on(self):
         """Return true if device is on."""
-        return self._state
+        return self._state != 'off'
 
     '''
     async def async_turn_on(self, speed: str = None, **kwargs) -> None:
@@ -131,7 +131,7 @@ class MijiaWasher(FanEntity):
         try:
             values = {}
             for prop in AVAILABLE_PROPERTIES:
-                values[prop] = self._device.get_properties(properties=[prop])
+                values[prop] = self._device.get_properties(properties=[prop])[0]
             return values
         except Exception:
             _LOGGER.error('Update seating state error.', exc_info=True)
