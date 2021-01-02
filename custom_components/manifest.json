@@ -1,0 +1,8 @@
+{
+  "domain": "mijia_washer",
+  "name": "Mijia Washer",
+  "documentation": "https://www.natic.cn",
+  "dependencies": [],
+  "codeowners": ["@natic"],
+  "requirements": []
+}
