@@ -34,6 +34,8 @@ AVAILABLE_PROPERTIES = [
 ]
 
 SPEED_LIST = [
+    'pause',
+    'start',
     'dailywash',    # 日常洗
     'quick',        # 快速洗
     'delicate',     # 轻柔洗
@@ -173,8 +175,12 @@ class MijiaWasher(FanEntity):
         if self.supported_features & SUPPORT_SET_SPEED == 0:
             return
         _LOGGER.debug("Setting the operation mode to: %s", speed)
-        self._device.raw_command("set_cycle", [speed])
-        self.start()
+        if speed == 'pause':
+            self.pause()
+        elif speed == 'start':
+            self.start()
+        else:
+            self._device.raw_command("set_cycle", [speed])
 
     @property
     def speed_list(self) -> list:
