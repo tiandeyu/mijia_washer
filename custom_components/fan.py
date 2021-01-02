@@ -33,6 +33,31 @@ AVAILABLE_PROPERTIES = [
     "volume",
 ]
 
+SPEED_LIST = [
+    'dailywash',    # 日常洗
+    'quick',        # 快速洗
+    'delicate',     # 轻柔洗
+    'intensive',    # 强力洗
+    'heavy',        # 大件洗
+    'washdry',      # 洗+烘
+    'spin',         # 单脱水
+    'dry',          # 单烘干
+    'dryairwash',   # 空气洗
+    'userdefine',   # 自定义
+    'washdryquick', # 快洗烘
+    'down',         # 羽绒服
+    'drumclean',    # 桶自洁
+    'rinse',        # 单漂洗
+    'cotton',       # 棉麻洗
+    'synthetic',    # 化纤洗
+    'shirt',        # 衬衣洗
+    'babycare',     # 婴童洗
+    'jacket',       # 冲锋衣
+    'underwear',    # 内衣洗
+    'boiling',      # 高温洗
+    'wool',         # 羊毛洗
+]
+
 ICON = 'mdi:washing-machine'
 
 def setup_platform(hass, config, add_devices_callback, discovery_info=None):
@@ -51,7 +76,6 @@ class MijiaWasher(FanEntity):
         self._device = Device(ip=host, token=token)
         self._available = True
         self._speed = None
-        self._speed_list = []
         self._state = False
         self._state_attrs = {}
         self._skip_update = False
@@ -89,44 +113,16 @@ class MijiaWasher(FanEntity):
     @property
     def is_on(self):
         """Return true if device is on."""
-        return self._state != 'off'
+        return self._state
 
-    '''
-    async def async_turn_on(self, speed: str = None, **kwargs) -> None:
-        """Turn the device on."""
-        if speed:
-            # If operation mode was set the device must not be turned on.
-            result = await self.async_set_speed(speed)
-        else:
-            result = await self._try_command(
-                "Turning the miio device on failed.", self._device.on
-            )
+    def start(self):
+        if self._state_attrs != 'run':
+            self._device.raw_command("set_startpause", ['true'])
 
-        if result:
-            self._state = True
-            self._skip_update = True
+    def pause(self):
+        if self._state_attrs != 'pause':
+            self._device.raw_command("set_startpause", ['false'])
 
-    async def async_turn_off(self, **kwargs) -> None:
-        """Turn the device off."""
-        result = await self._try_command(
-            "Turning the miio device off failed.", self._device.off
-        )
-
-        if result:
-            self._state = False
-            self._skip_update = True
-
-    async def async_set_buzzer_on(self):
-        """Turn the buzzer on."""
-        if self._device_features & FEATURE_SET_BUZZER == 0:
-            return
-
-        await self._try_command(
-            "Turning the buzzer of the miio device on failed.",
-            self._device.set_buzzer,
-            True,
-        )
-'''
     def update(self):
         try:
             values = {}
@@ -148,7 +144,8 @@ class MijiaWasher(FanEntity):
             _LOGGER.debug("Got new values: %s", values)
 
             self._available = True
-            self._state = values['state']
+            self._speed = values['cycle']
+            self._state = values['state'] != 'off'
             self._state_attrs = values
 
         except DeviceException as ex:
@@ -159,8 +156,10 @@ class MijiaWasher(FanEntity):
     @asyncio.coroutine
     def async_turn_on(self, speed: str = None) -> None:
         """Turn on the entity."""
-        result = self._device.raw_command("set_power", ["on"])
-        _LOGGER.debug("Turn on with result: %s" % result)
+        if not self._state:
+            result = self._device.raw_command("set_power", ["on"])
+            _LOGGER.debug("Turn on with result: %s" % result)
+        self.set_speed(speed)
 
     @asyncio.coroutine
     def async_turn_off(self) -> None:
@@ -169,10 +168,18 @@ class MijiaWasher(FanEntity):
         _LOGGER.debug("Turn off with result: %s" % result)
         # yield from self.async_set_speed(STATE_OFF)
 
+    def set_speed(self, speed: str) -> None:
+        """Set the speed of the fan."""
+        if self.supported_features & SUPPORT_SET_SPEED == 0:
+            return
+        _LOGGER.debug("Setting the operation mode to: %s", speed)
+        self._device.raw_command("set_cycle", [speed])
+        self.start()
+
     @property
     def speed_list(self) -> list:
         """Get the list of available speeds."""
-        return self._speed_list
+        return SPEED_LIST
 
     @property
     def speed(self):
@@ -182,19 +189,8 @@ class MijiaWasher(FanEntity):
 
         return None
 
-    async def async_set_speed(self, speed: str) -> None:
-        """Set the speed of the fan."""
-        if self.supported_features & SUPPORT_SET_SPEED == 0:
-            return
 
-        _LOGGER.debug("Setting the operation mode to: %s", speed)
-        '''
-        await self._try_command(
-            "Setting operation mode of the miio device failed.",
-            self._device.set_mode,
-            AirpurifierOperationMode[speed.title()],
-        )
-        '''
+
 
 
 
