@@ -155,6 +155,7 @@ class MijiaWasher(FanEntity):
             self._available = True
             self._speed = values['cycle']
             self._state = values['state'] != 'off'
+            values.update(self._info)
             self._state_attrs = values
 
         except DeviceException as ex:

@@ -25,7 +25,7 @@ https://github.com/tiandeyu/mijia_washer/tree/main/custom_components
 | scan_interval | 是 | 刷新间隔s，默认30 |
  
 ```yaml
-binary_sensor:
+fan:
   - platform: mijia_washer
     name: 'Washing Machine'
     host: 192.168.2.55
