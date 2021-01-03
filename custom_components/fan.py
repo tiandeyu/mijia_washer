@@ -9,6 +9,7 @@ from homeassistant.const import (
 )
 from homeassistant.components.fan import (
     FanEntity,
+    SPEED_OFF,
     SUPPORT_SET_SPEED,
     PLATFORM_SCHEMA,
     DOMAIN,
@@ -59,6 +60,14 @@ SPEED_LIST = [
     'boiling',      # 高温洗
     'wool',         # 羊毛洗
 ]
+
+PROCESS_VALUE = {
+    'wash': '主洗',
+    'rinse': '漂洗',
+    'spin': '脱水',
+    'dry': '烘干',
+    'invalid': '',
+}
 
 ICON = 'mdi:washing-machine'
 
@@ -155,13 +164,18 @@ class MijiaWasher(FanEntity):
             self._available = True
             self._speed = values['cycle']
             self._state = values['state'] != 'off'
+            # split process
+            process = values['process'].split(';')
+            options = process[0].split(':')[1].split(',')
+            processing = process[1].split(':')[1]
+            values['options'] = [PROCESS_VALUE[x] if x in PROCESS_VALUE else x for x in options]
+            values['process'] = PROCESS_VALUE[processing]
             values.update(self._info)
             self._state_attrs = values
 
         except DeviceException as ex:
             self._available = False
             _LOGGER.error("Got exception while fetching the state: %s", ex)
-
 
     @asyncio.coroutine
     def async_turn_on(self, speed: str = None) -> None:
@@ -202,9 +216,3 @@ class MijiaWasher(FanEntity):
             return self._speed
 
         return None
-
-
-
-
-
-
