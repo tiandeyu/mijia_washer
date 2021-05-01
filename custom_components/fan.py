@@ -1,6 +1,5 @@
 import logging
 import voluptuous as vol
-import asyncio
 import homeassistant.helpers.config_validation as cv
 from homeassistant.const import (
     CONF_NAME,
@@ -11,6 +10,7 @@ from homeassistant.components.fan import (
     FanEntity,
     SPEED_OFF,
     SUPPORT_SET_SPEED,
+    SUPPORT_PRESET_MODE,
     PLATFORM_SCHEMA,
     DOMAIN,
 )
@@ -34,7 +34,7 @@ AVAILABLE_PROPERTIES = [
     "volume",
 ]
 
-SPEED_LIST = [
+PRESET_MODES = [
     'pause',
     'start',
     'dailywash',    # 日常洗
@@ -93,15 +93,18 @@ class MijiaWasher(FanEntity):
             'model': info.model,
         }
         self._available = True
-        self._speed = None
-        self._state = False
+        self._speed = SPEED_OFF
+        self._percentage = None
+        self._speed_list = []
+        self._preset_modes = PRESET_MODES
+        self._preset_mode = None
         self._state_attrs = {}
         self._skip_update = False
 
     @property
     def supported_features(self):
         """Flag supported features."""
-        return SUPPORT_SET_SPEED
+        return SUPPORT_PRESET_MODE
 
     @property
     def should_poll(self):
@@ -129,9 +132,65 @@ class MijiaWasher(FanEntity):
         return self._state_attrs
 
     @property
-    def is_on(self):
-        """Return true if device is on."""
-        return self._state
+    def percentage(self) -> int:
+        """Return the current speed."""
+        return self._percentage
+
+    @property
+    def speed_count(self) -> int:
+        """Return the number of speeds the fan supports."""
+        return len(PRESET_MODES)
+
+    async def async_set_percentage(self, percentage: int) -> None:
+        """Set the speed of the fan, as a percentage."""
+        self._percentage = percentage
+        self._preset_mode = None
+        self.async_write_ha_state()
+
+    @property
+    def preset_mode(self) -> str:
+        """Return the current preset mode, e.g., auto, smart, interval, favorite."""
+        return self._preset_mode
+
+    @property
+    def preset_modes(self) -> list:
+        """Return a list of available preset modes."""
+        return self._preset_modes
+
+    async def async_set_preset_mode(self, preset_mode: str) -> None:
+        """Set new preset mode."""
+        _LOGGER.debug("Setting the operation mode to: %s", preset_mode)
+        if preset_mode not in self.preset_modes:
+            return
+        if preset_mode == 'pause':
+            self.pause()
+        elif preset_mode == 'start':
+            self.start()
+        else:
+            self._device.raw_command("set_cycle", [preset_mode])
+        self._preset_mode = preset_mode
+        self._percentage = None
+        self.async_write_ha_state()
+
+    async def async_turn_on(
+            self,
+            speed: str = None,
+            percentage: int = None,
+            preset_mode: str = None,
+            **kwargs,
+    ) -> None:
+        """Turn on the entity."""
+        if not self._state:
+            result = self._device.raw_command("set_power", ["on"])
+            _LOGGER.debug("Turn on with result: %s" % result)
+        self._preset_mode = PRESET_MODES[2]
+        self.async_write_ha_state()
+
+    async def async_turn_off(self, **kwargs) -> None:
+        """Turn off the entity."""
+        result = self._device.raw_command("set_power", ["off"])
+        await self.async_set_percentage(0)
+        _LOGGER.debug("Turn off with result: %s" % result)
 
     def start(self):
         if self._state_attrs != 'run':
@@ -156,7 +215,6 @@ class MijiaWasher(FanEntity):
         if self._skip_update:
             self._skip_update = False
             return
-
         try:
             values = await self.hass.async_add_executor_job(self.update)
             _LOGGER.debug("Got new values: %s", values)
@@ -177,42 +235,6 @@ class MijiaWasher(FanEntity):
             self._available = False
             _LOGGER.error("Got exception while fetching the state: %s", ex)
 
-    @asyncio.coroutine
-    def async_turn_on(self, speed: str = None) -> None:
-        """Turn on the entity."""
-        if not self._state:
-            result = self._device.raw_command("set_power", ["on"])
-            _LOGGER.debug("Turn on with result: %s" % result)
-        self.set_speed(speed)
 
-    @asyncio.coroutine
-    def async_turn_off(self) -> None:
-        """Turn off the entity."""
-        result = self._device.raw_command("set_power", ["off"])
-        _LOGGER.debug("Turn off with result: %s" % result)
-        # yield from self.async_set_speed(STATE_OFF)
 
-    def set_speed(self, speed: str) -> None:
-        """Set the speed of the fan."""
-        if self.supported_features & SUPPORT_SET_SPEED == 0:
-            return
-        _LOGGER.debug("Setting the operation mode to: %s", speed)
-        if speed == 'pause':
-            self.pause()
-        elif speed == 'start':
-            self.start()
-        else:
-            self._device.raw_command("set_cycle", [speed])
 
-    @property
-    def speed_list(self) -> list:
-        """Get the list of available speeds."""
-        return SPEED_LIST
-
-    @property
-    def speed(self):
-        """Return the current speed."""
-        if self._state:
-            return self._speed
-
-        return None
