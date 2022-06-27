@@ -5,10 +5,10 @@ from homeassistant.const import (
     CONF_NAME,
     CONF_HOST,
     CONF_TOKEN,
+    STATE_OFF,
 )
 from homeassistant.components.fan import (
     FanEntity,
-    SPEED_OFF,
     SUPPORT_SET_SPEED,
     SUPPORT_PRESET_MODE,
     PLATFORM_SCHEMA,
@@ -93,7 +93,7 @@ class MijiaWasher(FanEntity):
             'model': info.model,
         }
         self._available = True
-        self._speed = SPEED_OFF
+        self._speed = STATE_OFF
         self._percentage = None
         self._speed_list = []
         self._preset_modes = PRESET_MODES
